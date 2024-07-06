@@ -1,149 +1,95 @@
 import * as THREE from 'three';
-
+import { createCamera, createCubeGroup, createLights, createPlane, createRenderer, createSky } from './components';
+import Stats from 'stats.js';
 
 // Create a scene
 const scene = new THREE.Scene();
 
 // Create a camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 30;
+const camera = createCamera();
 
 // Create a renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true }); // Enable antialiasing for smoother edges
-renderer.setSize(window.innerWidth, window.innerHeight); // Increase the size for higher resolution
-renderer.setPixelRatio(window.devicePixelRatio); // Adjust pixel ratio for high-density displays
-renderer.shadowMap.enabled = true; // Enable shadow mapping
-document.body.appendChild(renderer.domElement);
+const renderer = createRenderer();
 
 // Create a very large plane along the x-y plane
-const planeGeometry = new THREE.PlaneGeometry(10000, 10000);
-const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x555555, side: THREE.DoubleSide });
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotation.x = Math.PI / 2;
-scene.add(plane);
+const plane = createPlane(scene);
+
+createSky(scene);
 
 // Create a point light
-const light = new THREE.PointLight(0xffffff, 1000);
-light.position.set(0, 20, 0); // Position the light
-light.castShadow = true; // Enable shadow casting
-scene.add(light);
-
-// Set up shadow properties for the light
-light.shadow.mapSize.width = 1024; // Shadow map width
-light.shadow.mapSize.height = 1024; // Shadow map height
-light.shadow.camera.near = 0.5; // Shadow camera near plane
-light.shadow.camera.far = 500; // Shadow camera far plane
-
-// Create a sphere to visualize the light's position
-const lightSphereGeometry = new THREE.SphereGeometry(0.2, 32, 32);
-const lightSphereMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const lightSphere = new THREE.Mesh(lightSphereGeometry, lightSphereMaterial);
-scene.add(lightSphere);
-
-// Create an ambient light
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
-scene.add(ambientLight);
+const { light, lightSphere, ambientLight } = createLights(scene);
 
 const group = new THREE.Group();
-let groupList = [];
-let groupPos = [];
+let groupList = createCubeGroup(group, scene);
 
-// Create a cube
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-// const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-// const materials = [material, material, edgeMaterial, edgeMaterial, material, material];
+// Create a character model
+const character = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+scene.add(character);
 
-let lastPos = [1, 0];
-let currentPos = [0, 0];
+// Update character position based on key inputs
+const characterSpeed = 1;
+const characterPosition = { x: 0, z: 0 };
 
-for (let i = 0; i < 1000; i++) {
-    let cube = new THREE.Mesh(geometry, material);
-    groupList.push(cube);
-    let difference = [currentPos[0] - lastPos[0], currentPos[1] - lastPos[1]];
-    let randomChoice = Math.random();
-    if (randomChoice < 0.8) {
-        currentPos[0] += difference[0];
-        currentPos[1] += difference[1];
-      } else if ((randomChoice > 0.8) && (randomChoice < 0.9)) {
-        currentPos[0] += difference[1];
-        currentPos[1] += difference[0];
-      } else {
-        currentPos[0] -= difference[1];
-        currentPos[1] -= difference[0];
-      }
-    groupList[i].position.set(currentPos[0], 0.5, currentPos[1]);
-    groupPos.push([currentPos[0], currentPos[1]]);
-    group.add(groupList[i]);
-    lastPos[0] += difference[0];
-    lastPos[1] += difference[1];
-  }
-
-// Calculate the centroid of the group
-let centroid = new THREE.Vector3(0, 0, 0);
-groupPos.forEach(pos => {
-  centroid.x += pos[0];
-  centroid.z += pos[1];
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'w') {
+        characterPosition.z -= Math.cos(character.rotation.y) * characterSpeed;
+        characterPosition.x -= Math.sin(character.rotation.y) * characterSpeed;
+    } else if (event.key === 's') {
+        characterPosition.z += Math.cos(character.rotation.y) * characterSpeed;
+        characterPosition.x += Math.sin(character.rotation.y) * characterSpeed;
+    } else if (event.key === 'a') {
+        characterPosition.z += Math.cos(character.rotation.y - Math.PI/2) * characterSpeed;
+        characterPosition.x += Math.sin(character.rotation.y - Math.PI/2) * characterSpeed;
+    } else if (event.key === 'd') {
+        characterPosition.z -= Math.cos(character.rotation.y - Math.PI/2) * characterSpeed;
+        characterPosition.x -= Math.sin(character.rotation.y - Math.PI/2) * characterSpeed;
+    }
 });
-centroid.divideScalar(groupPos.length);
 
-// Translate the group to the center
-group.position.sub(centroid);
-
-// const cube = new THREE.Mesh(geometry, material);
-scene.add(group);
-
-// Variables to store mouse position
 let mouseX = 0;
 let mouseY = 0;
 
 // Event listener for mouse move
 window.addEventListener('mousemove', (event) => {
-  mouseX = event.clientX;
-  mouseY = event.clientY;
+    mouseX = event.clientX;
+    mouseY = event.clientY;
 });
 
-let isSpacePressed = false;
+// Update character and camera orientation based on mouse movement
+function updateCameraOrbit() {
+  const radius = 10; // Radius of the circular orbit
+  const angleX = (mouseX / window.innerWidth) * 2 * Math.PI; // Angle for the x-axis rotation
+  const angleY = (mouseY / window.innerHeight) * Math.PI / 2; // Angle for the y-axis rotation
 
-// Listen for keydown event
-document.addEventListener('keydown', (event) => {
-if (event.code === 'Space') {
-    isSpacePressed = true;
+  // Update camera position for circular orbit
+  camera.position.x = character.position.x - radius * Math.sin(angleX) * Math.cos(angleY);
+  camera.position.y = character.position.y + radius * Math.sin(angleY);
+  camera.position.z = character.position.z + radius * Math.cos(angleX) * Math.cos(angleY);
+  camera.lookAt(character.position);
+
+  character.rotation.y = - angleX;
 }
-});
 
-// Listen for keyup event
-document.addEventListener('keyup', (event) => {
-if (event.code === 'Space') {
-    isSpacePressed = false;
-}
-});
+// Initialize stats
+const stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
 
 // Render the scene
 function animate() {
-  requestAnimationFrame(animate);
+    stats.begin();
 
-  // Calculate spherical coordinates
-  const radius = 50; // Distance from the center of the group
-  const phi = (mouseY / window.innerHeight) * Math.PI / 2; // Angle for the y-axis rotation
-  const theta = (mouseX / window.innerWidth) * 2 * Math.PI; // Angle for the z-axis rotation
+    requestAnimationFrame(animate);
 
-  // Update camera position
-  camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
-  camera.position.y = radius * Math.cos(phi);
-  camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+    // Update character position
+    character.position.x = characterPosition.x;
+    character.position.z = characterPosition.z;
 
-  // Make the camera look at the center of the scene
-  camera.lookAt(scene.position);
+    // Update character and camera orientation based on mouse movement
+    updateCameraOrbit();
 
-  if (isSpacePressed) {
-    // Update light position based on spacebar state
-    light.position.z = Math.sin(Date.now() * 0.002) * 20;
-    light.position.x = Math.cos(Date.now() * 0.002) * 20;
+    renderer.render(scene, camera);
 
-     // Update the visualization of the light's position
-     lightSphere.position.copy(light.position);
-  }
-  renderer.render(scene, camera);
+    stats.end();
 }
 animate();

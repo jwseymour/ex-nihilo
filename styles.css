@@ -8,13 +8,6 @@ body {
     background-color: #000;
   }
   
-  #info {
-    position: relative;
-    color: white;
-    font-size: 3em;
-    z-index: 1;
-  }
-  
   canvas {
     position: absolute;
     top: 0;
