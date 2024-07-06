@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { Vector3 } from 'three';
+import { getEdgeTable, getTriTable } from './MC_lookup.js';
 
 export function createCamera() {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -109,4 +110,94 @@ export function createCubeGroup(group, scene) {
     scene.add(group);
 
     return groupList;
+}
+
+export function marchingCubes(scalarField, isolevel) {
+    const group = new THREE.Group();
+    const sizeX = scalarField.length;
+    const sizeY = scalarField[0].length;
+    const sizeZ = scalarField[0][0].length;
+
+    const edgeTable = getEdgeTable();
+
+    const triTable = getTriTable();
+
+    function interpolate(p1, p2, val1, val2) {
+        if (Math.abs(isolevel - val1) < 0.00001) return p1;
+        if (Math.abs(isolevel - val2) < 0.00001) return p2;
+        if (Math.abs(val1 - val2) < 0.00001) return p1;
+        const mu = (isolevel - val1) / (val2 - val1);
+        return p1.clone().lerp(p2, mu);
+    }
+
+    for (let x = 0; x < sizeX - 1; x++) {
+        for (let y = 0; y < sizeY - 1; y++) {
+            for (let z = 0; z < sizeZ - 1; z++) {
+                const cubeCorners = [
+                    new THREE.Vector3(x, y, z),
+                    new THREE.Vector3(x + 1, y, z),
+                    new THREE.Vector3(x + 1, y + 1, z),
+                    new THREE.Vector3(x, y + 1, z),
+                    new THREE.Vector3(x, y, z + 1),
+                    new THREE.Vector3(x + 1, y, z + 1),
+                    new THREE.Vector3(x + 1, y + 1, z + 1),
+                    new THREE.Vector3(x, y + 1, z + 1)
+                ];
+
+                const cubeValues = [
+                    scalarField[x][y][z],
+                    scalarField[x + 1][y][z],
+                    scalarField[x + 1][y + 1][z],
+                    scalarField[x][y + 1][z],
+                    scalarField[x][y][z + 1],
+                    scalarField[x + 1][y][z + 1],
+                    scalarField[x + 1][y + 1][z + 1],
+                    scalarField[x][y + 1][z + 1]
+                ];
+
+                let cubeIndex = 0;
+                for (let i = 0; i < 8; i++) {
+                    if (cubeValues[i] < isolevel) cubeIndex |= 1 << i;
+                }
+
+                if (edgeTable[cubeIndex] === 0) continue;
+
+                const vertList = new Array(12);
+                if (edgeTable[cubeIndex] & 1) vertList[0] = interpolate(cubeCorners[0], cubeCorners[1], cubeValues[0], cubeValues[1]);
+                if (edgeTable[cubeIndex] & 2) vertList[1] = interpolate(cubeCorners[1], cubeCorners[2], cubeValues[1], cubeValues[2]);
+                if (edgeTable[cubeIndex] & 4) vertList[2] = interpolate(cubeCorners[2], cubeCorners[3], cubeValues[2], cubeValues[3]);
+                if (edgeTable[cubeIndex] & 8) vertList[3] = interpolate(cubeCorners[3], cubeCorners[0], cubeValues[3], cubeValues[0]);
+                if (edgeTable[cubeIndex] & 16) vertList[4] = interpolate(cubeCorners[4], cubeCorners[5], cubeValues[4], cubeValues[5]);
+                if (edgeTable[cubeIndex] & 32) vertList[5] = interpolate(cubeCorners[5], cubeCorners[6], cubeValues[5], cubeValues[6]);
+                if (edgeTable[cubeIndex] & 64) vertList[6] = interpolate(cubeCorners[6], cubeCorners[7], cubeValues[6], cubeValues[7]);
+                if (edgeTable[cubeIndex] & 128) vertList[7] = interpolate(cubeCorners[7], cubeCorners[4], cubeValues[7], cubeValues[4]);
+                if (edgeTable[cubeIndex] & 256) vertList[8] = interpolate(cubeCorners[0], cubeCorners[4], cubeValues[0], cubeValues[4]);
+                if (edgeTable[cubeIndex] & 512) vertList[9] = interpolate(cubeCorners[1], cubeCorners[5], cubeValues[1], cubeValues[5]);
+                if (edgeTable[cubeIndex] & 1024) vertList[10] = interpolate(cubeCorners[2], cubeCorners[6], cubeValues[2], cubeValues[6]);
+                if (edgeTable[cubeIndex] & 2048) vertList[11] = interpolate(cubeCorners[3], cubeCorners[7], cubeValues[3], cubeValues[7]);
+
+                for (let i = 0; triTable[cubeIndex][i] !== -1; i += 3) {
+                    const p1 = vertList[triTable[cubeIndex][i]];
+                    const p2 = vertList[triTable[cubeIndex][i + 1]];
+                    const p3 = vertList[triTable[cubeIndex][i + 2]];
+
+                    // Debugging logs
+                    if (!p1 || !p2 || !p3) {
+                        console.error('Undefined vertex detected', { cubeIndex, vertList, triTableEntry: triTable[cubeIndex] });
+                        continue;
+                    }
+
+                    const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2, p3]);
+                    geometry.setIndex([0, 1, 2]);
+                    geometry.computeVertexNormals();
+
+                    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    group.add(mesh);
+                }
+            }
+        }
+    }
+
+    return group;
 }
