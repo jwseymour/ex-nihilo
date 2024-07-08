@@ -2,10 +2,12 @@ import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { Vector3 } from 'three';
 import { getEdgeTable, getTriTable } from './MC_lookup.js';
+import { createNoise2D, createNoise3D } from 'simplex-noise';
+import PerlinNoise from './perlinNoise.js';
+import Alea from 'alea';
 
 export function createCamera() {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 30;
     return camera;
 }
 
@@ -112,14 +114,133 @@ export function createCubeGroup(group, scene) {
     return groupList;
 }
 
-export function marchingCubes(scalarField, isolevel) {
+export function sphereScalarField(size) {
+    const scalarField = new Array(size).fill().map(() => 
+        new Array(size).fill().map(() => 
+            new Array(size).fill(0)
+        )
+    );
+
+    const center = size / 2;
+    const radius = size / 4;
+
+    for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
+            for (let z = 0; z < size; z++) {
+                const dx = x - center;
+                const dy = y - center;
+                const dz = z - center;
+                scalarField[x][y][z] = Math.sqrt(dx * dx + dy * dy + dz * dz) - radius;
+            }
+        }
+    }
+    return scalarField
+}
+
+export function perlin2ScalarField(width, depth, amplitude, frequency, seed) {
+    const scalarField = new Array(width).fill().map(() => 
+        new Array(amplitude).fill().map(() => 
+            new Array(depth).fill(0)
+        )
+    );
+
+    const perlinNoise = new PerlinNoise;
+
+    for (let z = 0; z < depth; z++) {
+        for (let x = 0; x < width; x++) {
+            const value = perlinNoise.noise(x / frequency, z / frequency, 1) * amplitude + amplitude/2;
+            // console.log(value);
+            for (let y = 0; y < amplitude; y++) {
+                if (y > value) {
+                    scalarField[x][y][z] = -1;
+                } else {
+                    scalarField[x][y][z] = 1;
+                }
+            }
+        }
+    }
+    // console.log(scalarField);
+    return scalarField;
+}
+
+export function perlin3ScalarField(width, depth, height, frequency, seed) {
+    const scalarField = new Array(width).fill().map(() => 
+        new Array(height).fill().map(() => 
+            new Array(depth).fill(0)
+        )
+    );
+
+    const perlinNoise = new PerlinNoise;
+
+    for (let z = 0; z < depth; z++) {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const value = perlinNoise.noise(x / frequency, y / frequency, z / frequency);
+                console.log(value);
+                scalarField[x][y][z] = value;
+            }
+        }
+    }
+
+    console.log(scalarField);
+    return scalarField;
+}
+
+export function simplex2ScalarField(width, depth, amplitude, frequency, seed) {
+    const scalarField = new Array(width).fill().map(() => 
+        new Array(amplitude).fill().map(() => 
+            new Array(depth).fill(0)
+        )
+    );
+
+    const noise2D = createNoise2D(Alea(seed));
+
+    for (let z = 0; z < depth; z++) {
+        for (let x = 0; x < width; x++) {
+            const value = noise2D(x / frequency, z / frequency) * amplitude + amplitude/2;
+            // console.log(value);
+            for (let y = 0; y < amplitude; y++) {
+                if (y > value) {
+                    scalarField[x][y][z] = -1;
+                } else {
+                    scalarField[x][y][z] = 1;
+                }
+            }
+        }
+    }
+    // console.log(scalarField);
+    return scalarField;
+}
+
+export function simplex3ScalarField(width, depth, height, frequency, seed) {
+    const scalarField = new Array(width).fill().map(() => 
+        new Array(height).fill().map(() => 
+            new Array(depth).fill(0)
+        )
+    );
+
+    const noise3D = createNoise3D(Alea(seed));
+
+    for (let z = 0; z < depth; z++) {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const value = noise3D(x / frequency, y / frequency, z / frequency);
+                // console.log(value);
+                scalarField[x][y][z] = value;
+            }
+        }
+    }
+    // console.log(scalarField);
+    return scalarField;
+}
+
+export function marchingCubes(scalarField, isolevel, color = 0x00ff00) {
     const group = new THREE.Group();
     const sizeX = scalarField.length;
     const sizeY = scalarField[0].length;
     const sizeZ = scalarField[0][0].length;
 
     const edgeTable = getEdgeTable();
-
     const triTable = getTriTable();
 
     function interpolate(p1, p2, val1, val2) {
@@ -191,7 +312,7 @@ export function marchingCubes(scalarField, isolevel) {
                     geometry.setIndex([0, 1, 2]);
                     geometry.computeVertexNormals();
 
-                    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+                    const material = new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide });
                     const mesh = new THREE.Mesh(geometry, material);
                     group.add(mesh);
                 }

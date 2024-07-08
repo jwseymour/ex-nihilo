@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { marchingCubes, createCamera, createLights, createRenderer, createSky } from './components';
+import { marchingCubes, createCamera, createLights, createRenderer, createSky, sphereScalarField, perlin2ScalarField, perlin3ScalarField, simplex2ScalarField, simplex3ScalarField } from './components';
 import Stats from 'stats.js';
 
 // Create a scene
@@ -16,38 +16,42 @@ createSky(scene);
 // Create a point light
 createLights(scene);
 
-// Generate dummy data for the scalar field
-const size = 30;
-const scalarField = new Array(size).fill().map(() => 
-    new Array(size).fill().map(() => 
-        new Array(size).fill(0)
-    )
-);
+// const scalarField = sphereScalarField(20);
+// const scalarField = perlin3ScalarField(20,20,20,20, 'seed');
+// // Define the isolevel
+// const isolevel = 0;
+// // Run the marching cubes algorithm
+// const isosurface = marchingCubes(scalarField, isolevel, 'white');
+// scene.add(isosurface);
 
-const center = size / 2;
-const radius = size / 4;
+const sfs = {x: 20, y: 20, z: 20}
 
-for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-        for (let z = 0; z < size; z++) {
-            const dx = x - center;
-            const dy = y - center;
-            const dz = z - center;
-            scalarField[x][y][z] = Math.sqrt(dx * dx + dy * dy + dz * dz) - radius;
-        }
-    }
-}
-
-// Define the isolevel
-const isolevel = 0;
-
-// Run the marching cubes algorithm
-const isosurface = marchingCubes(scalarField, isolevel);
-scene.add(isosurface);
+// perlin 2d
+const p2sf = perlin2ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
+const p2is = marchingCubes(p2sf, 0, 'white');
+p2is.rotation.y = 0;
+scene.add(p2is);
+// perlin 3d
+const p3sf = perlin3ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
+const p3is = marchingCubes(p3sf, 0, 'red');
+p3is.rotation.y = Math.PI / 2;
+scene.add(p3is);
+// simplex 2d
+const s2sf = simplex2ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
+const s2is = marchingCubes(s2sf, 0, 'green');
+s2is.rotation.y = Math.PI * 3 / 2;
+scene.add(s2is);
+// simplex 3d
+const s3sf = simplex3ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
+const s3is = marchingCubes(s3sf, 0, 'blue');
+s3is.rotation.y = Math.PI;
+scene.add(s3is);
 
 // Create a character model
 const character = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+character.position.set(0, sfs.y + 5, 0);
 scene.add(character);
+
 
 // Update character position based on key inputs
 const characterAcceleration = 0.1;
