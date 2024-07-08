@@ -148,7 +148,7 @@ export function perlin2ScalarField(width, depth, amplitude, frequency, seed) {
 
     for (let z = 0; z < depth; z++) {
         for (let x = 0; x < width; x++) {
-            const value = perlinNoise.noise(x / frequency, z / frequency, 1) * amplitude + amplitude/2;
+            const value = perlinNoise.noise(x / frequency, z / frequency, 1) * amplitude/2 + amplitude/2;
             // console.log(value);
             for (let y = 0; y < amplitude; y++) {
                 if (y > value) {
@@ -197,7 +197,7 @@ export function simplex2ScalarField(width, depth, amplitude, frequency, seed) {
 
     for (let z = 0; z < depth; z++) {
         for (let x = 0; x < width; x++) {
-            const value = noise2D(x / frequency, z / frequency) * amplitude + amplitude/2;
+            const value = noise2D(x / frequency, z / frequency) * amplitude/2 + amplitude/2;
             // console.log(value);
             for (let y = 0; y < amplitude; y++) {
                 if (y > value) {
