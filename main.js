@@ -24,7 +24,7 @@ createLights(scene);
 // const isosurface = marchingCubes(scalarField, isolevel, 'white');
 // scene.add(isosurface);
 
-const sfs = {x: 20, y: 20, z: 20}
+const sfs = {x: 30, y: 20, z: 30}
 
 // perlin 2d
 const p2sf = perlin2ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
