@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { Vector3 } from 'three';
-import { getEdgeTable, getTriTable } from './MC_lookup.js';
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import PerlinNoise from './perlinNoise.js';
 import Alea from 'alea';

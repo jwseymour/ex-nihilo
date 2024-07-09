@@ -10,12 +10,20 @@ self.onmessage = function (e) {
     const edgeTable = getEdgeTable();
     const triTable = getTriTable();
 
+    const interpolateCache = new Map();
+
     const interpolate = (p1, p2, val1, val2) => {
+        const key = `${p1.x},${p1.y},${p1.z}-${p2.x},${p2.y},${p2.z}`;
+        if (interpolateCache.has(key)) {
+            return interpolateCache.get(key);
+        }
         if (Math.abs(isolevel - val1) < 0.00001) return p1;
         if (Math.abs(isolevel - val2) < 0.00001) return p2;
         if (Math.abs(val1 - val2) < 0.00001) return p1;
         const mu = (isolevel - val1) / (val2 - val1);
-        return p1.clone().lerp(p2, mu);
+        const result = p1.clone().lerp(p2, mu);
+        interpolateCache.set(key, result);
+        return result;
     };
 
     for (let x = 0; x < sizeX - 1; x++) {
@@ -32,7 +40,7 @@ self.onmessage = function (e) {
                     new THREE.Vector3(x, y + 1, z + 1)
                 ];
 
-                const cubeValues = [
+                const cubeValues = new Float32Array([
                     scalarField[x][y][z],
                     scalarField[x + 1][y][z],
                     scalarField[x + 1][y + 1][z],
@@ -41,7 +49,7 @@ self.onmessage = function (e) {
                     scalarField[x + 1][y][z + 1],
                     scalarField[x + 1][y + 1][z + 1],
                     scalarField[x][y + 1][z + 1]
-                ];
+                ]);
 
                 let cubeIndex = 0;
                 for (let i = 0; i < 8; i++) {
