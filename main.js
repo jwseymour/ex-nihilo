@@ -16,42 +16,40 @@ createSky(scene);
 // Create a point light
 createLights(scene);
 
-// const scalarField = sphereScalarField(20);
-// const scalarField = perlin3ScalarField(20,20,20,20, 'seed');
-// // Define the isolevel
-// const isolevel = 0;
-// // Run the marching cubes algorithm
-// const isosurface = marchingCubes(scalarField, isolevel, 'white');
-// scene.add(isosurface);
-
-const sfs = {x: 30, y: 20, z: 30}
+const sfs = { x: 30, y: 20, z: 30 };
 
 // perlin 2d
-const p2sf = perlin2ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
-const p2is = marchingCubes(p2sf, 0, 'white');
-p2is.rotation.y = 0;
-scene.add(p2is);
+const p2sf = perlin2ScalarField(sfs.x, sfs.z, sfs.y, 20, 'seed');
+marchingCubes(p2sf, 0, 'white').then(p2is => {
+    p2is.rotation.y = 0;
+    scene.add(p2is);
+});
+
 // perlin 3d
-const p3sf = perlin3ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
-const p3is = marchingCubes(p3sf, 0, 'red');
-p3is.rotation.y = Math.PI / 2;
-scene.add(p3is);
+const p3sf = perlin3ScalarField(sfs.x, sfs.z, sfs.y, 20, 'seed');
+marchingCubes(p3sf, 0, 'red').then(p3is => {
+    p3is.rotation.y = Math.PI / 2;
+    scene.add(p3is);
+});
+
 // simplex 2d
-const s2sf = simplex2ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
-const s2is = marchingCubes(s2sf, 0, 'green');
-s2is.rotation.y = Math.PI * 3 / 2;
-scene.add(s2is);
+const s2sf = simplex2ScalarField(sfs.x, sfs.z, sfs.y, 20, 'seed');
+marchingCubes(s2sf, 0, 'green').then(s2is => {
+    s2is.rotation.y = Math.PI * 3 / 2;
+    scene.add(s2is);
+});
+
 // simplex 3d
-const s3sf = simplex3ScalarField(sfs.x,sfs.z,sfs.y,20, 'seed');
-const s3is = marchingCubes(s3sf, 0, 'blue');
-s3is.rotation.y = Math.PI;
-scene.add(s3is);
+const s3sf = simplex3ScalarField(sfs.x, sfs.z, sfs.y, 20, 'seed');
+marchingCubes(s3sf, 0, 'blue').then(s3is => {
+    s3is.rotation.y = Math.PI;
+    scene.add(s3is);
+});
 
 // Create a character model
 const character = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
 character.position.set(0, sfs.y + 5, 0);
 scene.add(character);
-
 
 // Update character position based on key inputs
 const characterAcceleration = 0.1;
@@ -76,17 +74,17 @@ window.addEventListener('mousemove', (event) => {
 
 // Update character and camera orientation based on mouse movement
 function updateCameraOrbit() {
-  const radius = 10; // Radius of the circular orbit
-  const angleX = (mouseX / window.innerWidth) * 2 * Math.PI; // Angle for the x-axis rotation
-  const angleY = (mouseY / window.innerHeight) * Math.PI - Math.PI/2; // Angle for the y-axis rotation
+    const radius = 10; // Radius of the circular orbit
+    const angleX = (mouseX / window.innerWidth) * 2 * Math.PI; // Angle for the x-axis rotation
+    const angleY = (mouseY / window.innerHeight) * Math.PI - Math.PI / 2; // Angle for the y-axis rotation
 
-  // Update camera position for circular orbit
-  camera.position.x = character.position.x - radius * Math.sin(angleX) * Math.cos(angleY);
-  camera.position.y = character.position.y + radius * Math.sin(angleY);
-  camera.position.z = character.position.z + radius * Math.cos(angleX) * Math.cos(angleY);
-  camera.lookAt(character.position);
+    // Update camera position for circular orbit
+    camera.position.x = character.position.x - radius * Math.sin(angleX) * Math.cos(angleY);
+    camera.position.y = character.position.y + radius * Math.sin(angleY);
+    camera.position.z = character.position.z + radius * Math.cos(angleX) * Math.cos(angleY);
+    camera.lookAt(character.position);
 
-  character.rotation.y = - angleX;
+    character.rotation.y = -angleX;
 }
 
 const xCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0, 10, 32), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
@@ -124,8 +122,7 @@ function animate() {
 
     renderer.render(scene, camera);
 
-    // console.log(character.rotation)
-
     stats.end();
 }
+
 animate();
